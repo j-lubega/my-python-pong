@@ -1,55 +1,82 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>Mobile Python Pong</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Universal Python Pong</title>
     <link rel="stylesheet" href="https://pyscript.net/releases/2024.1.1/core.css" />
     <script type="module" src="https://pyscript.net/releases/2024.1.1/core.js"></script>
     <style>
-        body { background: #000; margin: 0; color: white; text-align: center; overflow: hidden; }
-        canvas { display: block; background: #111; touch-action: none; }
+        body { background: #000; margin: 0; color: white; font-family: sans-serif; overflow: hidden; touch-action: none; }
+        canvas { display: block; background: #111; }
+        #status { position: absolute; top: 10px; width: 100%; text-align: center; pointer-events: none; }
     </style>
 </head>
 <body>
+    <div id="status">Loading Python Engine...</div>
     <canvas id="pongCanvas"></canvas>
+
     <script type="py">
 import asyncio
 from js import document, window
 
 canvas = document.getElementById("pongCanvas")
+status = document.getElementById("status")
 canvas.width = window.innerWidth
 canvas.height = window.innerHeight
 ctx = canvas.getContext("2d")
 
+# Game State
 ball = {"x": canvas.width/2, "y": canvas.height/2, "dx": 5, "dy": 5}
-p_l = {"y": canvas.height/2 - 40}
-p_r = {"y": canvas.height/2 - 40}
+p_l = {"y": canvas.height/2 - 50}
+p_r = {"y": canvas.height/2 - 50}
+keys = set()
+
+# Input Handlers
+def handle_key(e):
+    if e.type == "keydown": keys.add(e.key)
+    else: keys.discard(e.key)
 
 def handle_touch(e):
     e.preventDefault()
     for t in e.touches:
-        if t.pageX < canvas.width / 2: p_l["y"] = t.pageY - 40
-        else: p_r["y"] = t.pageY - 40
+        if t.pageX < canvas.width / 2: p_l["y"] = t.pageY - 50
+        else: p_r["y"] = t.pageY - 50
 
-document.addEventListener("touchstart", handle_touch, False)
-document.addEventListener("touchmove", handle_touch, False)
+window.addEventListener("keydown", handle_key)
+window.addEventListener("keyup", handle_key)
+document.addEventListener("touchstart", handle_touch, { "passive": False })
+document.addEventListener("touchmove", handle_touch, { "passive": False })
 
 async def main():
+    status.innerHTML = "W/S or Arrows | Tap Sides to Play"
     while True:
+        # Keyboard Move
+        if "w" in keys: p_l["y"] -= 7
+        if "s" in keys: p_l["y"] += 7
+        if "ArrowUp" in keys: p_r["y"] -= 7
+        if "ArrowDown" in keys: p_r["y"] += 7
+
+        # Ball Physics
         ball["x"] += ball["dx"]; ball["y"] += ball["dy"]
         if ball["y"] <= 0 or ball["y"] >= canvas.height: ball["dy"] *= -1
-        if (ball["x"] < 20 and p_l["y"] < ball["y"] < p_l["y"]+80) or \
-           (ball["x"] > canvas.width-20 and p_r["y"] < ball["y"] < p_r["y"]+80):
-            ball["dx"] *= -1
+        
+        # Collision
+        if (ball["x"] < 30 and p_l["y"] < ball["y"] < p_l["y"]+100) or \
+           (ball["x"] > canvas.width-30 and p_r["y"] < ball["y"] < p_r["y"]+100):
+            ball["dx"] *= -1.05
+
+        # Reset
         if ball["x"] < 0 or ball["x"] > canvas.width:
             ball["x"], ball["y"] = canvas.width/2, canvas.height/2
-        
+            ball["dx"] = 5 if ball["dx"] < 0 else -5
+
+        # Render
         ctx.clearRect(0, 0, canvas.width, canvas.height)
         ctx.fillStyle = "white"
-        ctx.fillRect(10, p_l["y"], 10, 80)
-        ctx.fillRect(canvas.width-20, p_r["y"], 10, 80)
-        ctx.beginPath(); ctx.arc(ball["x"], ball["y"], 8, 0, 6.28); ctx.fill()
+        ctx.fillRect(15, p_l["y"], 15, 100) # Paddle L
+        ctx.fillRect(canvas.width-30, p_r["y"], 15, 100) # Paddle R
+        ctx.beginPath(); ctx.arc(ball["x"], ball["y"], 10, 0, 6.28); ctx.fill()
         await asyncio.sleep(0.016)
 
 asyncio.ensure_future(main())
