@@ -22,6 +22,7 @@
     <script type="py">
 import asyncio
 from js import document, window
+from pyodide.ffi import create_proxy
 
 canvas = document.getElementById("pongCanvas")
 canvas.width = window.innerWidth
@@ -43,10 +44,10 @@ def on_touch(e):
         if t.pageX < canvas.width/2: p_l["y"] = t.pageY - 50
         else: p_r["y"] = t.pageY - 50
 
-window.addEventListener("keydown", on_keydown)
-window.addEventListener("keyup", on_keyup)
-document.addEventListener("touchstart", on_touch, {"passive": False})
-document.addEventListener("touchmove", on_touch, {"passive": False})
+window.addEventListener("keydown", create_proxy(on_keydown))
+window.addEventListener("keyup", create_proxy(on_keyup))
+document.addEventListener("touchstart", create_proxy(on_touch), {"passive": False})
+document.addEventListener("touchmove", create_proxy(on_touch), {"passive": False})
 
 async def main():
     while True:
